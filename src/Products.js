@@ -2,66 +2,88 @@ import React, { Component } from 'react'
 import Filters from './Filters'
 import ProductTable from './ProductTable'
 import ProductForm from './ProductForm'
-
-let PRODUCTS = {
-    '1': {id: 1, category: 'Music', price: '$459.99', name: 'Clarinet'},
-    '2': {id: 2, category: 'Music', price: '$5,000', name: 'Cello'},
-    '3': {id: 3, category: 'Music', price: '$3,500', name: 'Tuba'},
-    '4': {id: 4, category: 'Furniture', price: '$799', name: 'Chaise Lounge'},
-    '5': {id: 5, category: 'Furniture', price: '$1,300', name: 'Dining Table'},
-    '6': {id: 6, category: 'Furniture', price: '$100', name: 'Bean Bag'}
-};
+import $ from 'jquery'
 
 class Products extends Component {
-    constructor(props) {
-        super(props)
-        this.state = {
-            filterText: '',
-            products: PRODUCTS
+  constructor(props) {
+    super(props)
+    this.state = {
+      filterText: '',
+      products: []
+    }
+    this.handleFilter = this.handleFilter.bind(this)
+    this.handleSave = this.handleSave.bind(this)
+  }
+
+  componentDidMount() {
+    this.getData()
+  }
+
+  getData = () => {
+    fetch('http://localhost:3001/product/get/')
+      .then(res => res.json())
+      .then(
+        result => {
+          this.setState({
+            products: result
+          })
+        },
+        error => {
+          console.log('Fetch Error: ', error)
         }
-        this.handleFilter = this.handleFilter.bind(this)
-        this.handleDestroy = this.handleDestroy.bind(this)
-        this.handleSave = this.handleSave.bind(this)
+      )
+  }
+
+  handleFilter(filterInput) {
+    this.setState(filterInput)
+  }
+
+  handleSave(product) {
+    if (!product.id) {
+      product.id = new Date().getTime()
     }
 
-    handleFilter(filterInput) {
-        this.setState(filterInput)
-    }
+    $.ajax({
+      type: 'POST',
+      url: 'http://localhost:3001/product/create/',
+      data: product
+    }).then(() => {
+      this.getData()
+    })
+  }
 
-    handleSave(product) {
-        if (!product.id) {
-            product.id = new Date().getTime()
-        }
-        this.setState((prevState) => {
-            let products = prevState.products
-            products[product.id] = product
-            return { products }
-        })
-    }
+  handleDestroy = productId => {
+    $.ajax({
+      type: 'DELETE',
+      url: `http://localhost:3001/product/delete/${productId}`
+    }).then(() => {
+      this.getData()
+    })
+  }
 
-    handleDestroy(productId) {
-        this.setState((prevState) => {
-            let products = prevState.products
-            delete products[productId]
-            return { products }
-        });
-    }
+  handleUpdateStatus = productId => {
+    $.ajax({
+      type: 'PUT',
+      url: `http://localhost:3001/product/update/${productId}`
+    }).then(() => {
+      this.getData()
+    })
+  }
 
-    render () {
-        return (
-            <div>
-                <h1>My Inventory</h1>
-                <Filters 
-                    onFilter={this.handleFilter}></Filters>
-                <ProductTable 
-                    products={this.state.products}
-                    filterText={this.state.filterText}
-                    onDestroy={this.handleDestroy}></ProductTable>
-                <ProductForm
-                    onSave={this.handleSave}></ProductForm>
-            </div>
-        )
-    }
+  render() {
+    return (
+      <div>
+        <h1>My Inventory</h1>
+        <Filters onFilter={this.handleFilter}></Filters>
+        <ProductTable
+          products={this.state.products}
+          filterText={this.state.filterText}
+          onDestroy={this.handleDestroy}
+          onUpdate={this.handleUpdateStatus}></ProductTable>
+        <ProductForm onSave={this.handleSave}></ProductForm>
+      </div>
+    )
+  }
 }
 
 export default Products
